@@ -15,14 +15,14 @@ export interface ProductKind {
 }
 
 export const PRODUCT_KINDS: ProductKind[] = [
-  { key: "BDPE",        label: "Bom Dia PE",       type: "programa", defaultStudio: "Estúdio 2" },
-  { key: "NE1",         label: "NE1",              type: "programa", defaultStudio: "Estúdio 2" },
+  { key: "BDPE",        label: "Bom Dia PE",      type: "programa", defaultStudio: "Estúdio 2" },
+  { key: "NE1",         label: "NE1",             type: "programa", defaultStudio: "Estúdio 2" },
   { key: "GE",          label: "Globo Esporte PE", type: "programa", defaultStudio: "Estúdio 2" },
-  { key: "BOLETIM",     label: "Boletim",          type: "programa", defaultStudio: "Estúdio 1" },
-  { key: "NE2",         label: "NE2",              type: "programa", defaultStudio: "Estúdio 2" },
-  { key: "JOGO",        label: "Jogo",             type: "jogo",     defaultStudio: "Estúdio 3" },
-  { key: "GCO",         label: "GCO",              type: "programa", defaultStudio: "Estúdio 1" },
-  { key: "DESCOMPLICA", label: "Descomplica PE",   type: "programa", defaultStudio: "Estúdio 3" },
+  { key: "BOLETIM",     label: "Boletim",         type: "programa", defaultStudio: "Estúdio 1" },
+  { key: "NE2",         label: "NE2",             type: "programa", defaultStudio: "Estúdio 2" },
+  { key: "JOGO",        label: "Jogo",            type: "jogo",     defaultStudio: "" },
+  { key: "GCO",         label: "GCO",             type: "programa", defaultStudio: "Estúdio 1" },
+  { key: "DESCOMPLICA", label: "Descomplica PE",  type: "programa", defaultStudio: "Estúdio 3" },
 ];
 
 // Funções sugeridas por tipo de produto (o admin pode adicionar outras na hora).

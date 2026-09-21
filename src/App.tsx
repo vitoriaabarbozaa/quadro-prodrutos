@@ -6,7 +6,7 @@ import {
 import { useRecifeTime, formatTime, toMinutes, currentMinutes, countdown } from "./hooks";
 import { login, logout, getSession, type AdminSession } from "./auth";
 import {
-  PRODUCT_KINDS, getRolesFor, getAllPeople, addPerson, addRole,
+  PRODUCT_KINDS, getRolesFor, getPeopleForRole, addPerson, addRole,
   type ProductKindKey,
 } from "./roster";
 import { getSchedule, addProduct, updateProduct, deleteProduct } from "./storage";
@@ -653,10 +653,9 @@ function ProductFormModal({
 }) {
   const [form, setForm]         = useState<ProductFormState>(initial);
   const [peopleVersion, bump]   = useState(0); // força atualizar lista após addPerson/addRole
-  const [newPersonName, setNewPersonName] = useState("");
-  const [newRoleName, setNewRoleName]     = useState("");
+  const [newPersonByRole, setNewPersonByRole] = useState<Record<string, string>>({});
+  const [newRoleName, setNewRoleName]         = useState("");
 
-  const allPeople = useMemo(() => getAllPeople(), [peopleVersion]);
   const roles     = useMemo(() => getRolesFor(form.kind), [form.kind, peopleVersion]);
   const kindInfo  = PRODUCT_KINDS.find(k => k.key === form.kind)!;
 
@@ -679,10 +678,11 @@ function ProductFormModal({
     });
   }
 
-  function handleAddPerson() {
-    if (!newPersonName.trim()) return;
-    addPerson(newPersonName);
-    setNewPersonName("");
+  function handleAddPersonForRole(role: string) {
+    const name = (newPersonByRole[role] ?? "").trim();
+    if (!name) return;
+    addPerson(role, name);
+    setNewPersonByRole(s => ({ ...s, [role]: "" }));
     bump(v => v + 1);
   }
 
@@ -820,56 +820,64 @@ function ProductFormModal({
             </div>
 
             <div className="space-y-3">
-              {roles.map(role => (
-                <div key={role} className="border border-gray-100 rounded-lg px-3 py-2.5">
-                  <div className="text-xs font-semibold text-gray-600 mb-1.5">{role}</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {allPeople.map(person => {
-                      const checked = isChecked(role, person);
-                      return (
-                        <button
-                          type="button"
-                          key={person}
-                          onClick={() => toggleMember(role, person)}
-                          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                            checked
-                              ? "bg-blue-600 border-blue-600 text-white"
-                              : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
-                          }`}
-                        >
-                          {person}
-                        </button>
-                      );
-                    })}
+              {roles.map(role => {
+                const peopleForRole = getPeopleForRole(role);
+                return (
+                  <div key={role} className="border border-gray-100 rounded-lg px-3 py-2.5">
+                    <div className="text-xs font-semibold text-gray-600 mb-1.5">{role}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {peopleForRole.map(person => {
+                        const checked = isChecked(role, person);
+                        return (
+                          <button
+                            type="button"
+                            key={person}
+                            onClick={() => toggleMember(role, person)}
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                              checked
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                            }`}
+                          >
+                            {person}
+                          </button>
+                        );
+                      })}
+                      {peopleForRole.length === 0 && (
+                        <span className="text-[11px] text-gray-300 italic py-1">Nenhuma pessoa cadastrada ainda</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <input
+                        value={newPersonByRole[role] ?? ""}
+                        onChange={e => setNewPersonByRole(s => ({ ...s, [role]: e.target.value }))}
+                        placeholder={`Nova pessoa em ${role}`}
+                        className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 w-44"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddPersonForRole(role)}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-1.5"
+                      >
+                        + adicionar
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Adicionar pessoa / função nova */}
-            <div className="flex flex-wrap gap-2 mt-3">
-              <div className="flex items-center gap-1.5">
-                <input
-                  value={newPersonName}
-                  onChange={e => setNewPersonName(e.target.value)}
-                  placeholder="Nova pessoa"
-                  className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 w-36"
-                />
-                <button type="button" onClick={handleAddPerson} className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-1.5">
-                  + adicionar
-                </button>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <input
-                  value={newRoleName}
-                  onChange={e => setNewRoleName(e.target.value)}
-                  placeholder="Nova função"
-                  className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 w-36"
-                />
-                <button type="button" onClick={handleAddRole} className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-1.5">
-                  + adicionar
-                </button>
-              </div>
+            {/* Adicionar função nova */}
+            <div className="flex items-center gap-1.5 mt-3">
+              <input
+                value={newRoleName}
+                onChange={e => setNewRoleName(e.target.value)}
+                placeholder="Nova função (ex: Editor de imagens)"
+                className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 w-56"
+              />
+              <button type="button" onClick={handleAddRole} className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-1.5">
+                + adicionar função
+              </button>
             </div>
           </div>
 
