@@ -1,4 +1,5 @@
 {
+  "title": "Quadro de Produtos",
   "description": "Displays a weekly TV schedule with real-time status, detailed program info, and filters to help broadcast teams track current and upcoming shows efficiently.",
   "robots": {
     "index": false
