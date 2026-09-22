@@ -5,7 +5,7 @@
 // salvo no navegador para as próximas vezes.
 
 export type ProductKindKey =
-  | "BDPE" | "NE1" | "GE" | "BOLETIM" | "NE2" | "JOGO" | "GCO" | "DESCOMPLICA";
+  | "BDPE" | "NE1" | "GE" | "BOLETIM" | "NE2" | "JOGO" | "GCO" | "DESCOMPLICA" | "EVENTO";
 
 export interface ProductKind {
   key: ProductKindKey;
@@ -23,33 +23,31 @@ export const PRODUCT_KINDS: ProductKind[] = [
   { key: "JOGO",        label: "Jogo",            type: "jogo",     defaultStudio: "" },
   { key: "GCO",         label: "GCO",             type: "programa", defaultStudio: "Estúdio 1" },
   { key: "DESCOMPLICA", label: "Descomplica PE",  type: "programa", defaultStudio: "Estúdio 3" },
+  { key: "EVENTO",      label: "Evento",          type: "programa", defaultStudio: "" },
 ];
 
 // Funções sugeridas por tipo de produto (o admin pode adicionar outras na hora).
+// Programas de rotina e eventos só precisam do(a) apresentador(a); jogos
+// precisam de narração, comentário e equipe ao vivo em campo.
 export const ROLE_PRESETS: Record<ProductKindKey, string[]> = {
-  BDPE:        ["Apresentador", "Apresentadora", "Direção", "Câmera 1", "Câmera 2", "Técnico de Áudio"],
-  NE1:         ["Apresentador", "Apresentadora", "Direção", "Câmera 1", "Câmera 2", "Técnico de Áudio", "Grafismo"],
-  GE:          ["Apresentador", "Apresentadora", "Repórter", "Direção"],
-  BOLETIM:     ["Apresentador", "Apresentadora", "Câmera"],
-  NE2:         ["Apresentador", "Apresentadora", "Direção", "Câmera 1", "Câmera 2", "Técnico de Áudio", "Grafismo"],
-  JOGO:        ["Narrador", "Comentarista", "Repórter de Campo", "Repórter de Vestiário", "Produtor", "Técnico de Áudio"],
-  GCO:         ["Apresentador", "Apresentadora", "Direção", "Câmera 1"],
-  DESCOMPLICA: ["Apresentador", "Apresentadora", "Direção", "Câmera 1", "Câmera 2", "Sonoplasta"],
+  BDPE:        ["Apresentador(a)"],
+  NE1:         ["Apresentador(a)"],
+  GE:          ["Apresentador(a)"],
+  BOLETIM:     ["Apresentador(a)"],
+  NE2:         ["Apresentador(a)"],
+  JOGO:        ["Narrador", "Comentarista", "Ao vivo em campo"],
+  GCO:         ["Apresentador(a)"],
+  DESCOMPLICA: ["Apresentador(a)"],
+  EVENTO:      ["Apresentador(a)"],
 };
 
 // Pessoas pré-cadastradas, já separadas por função (serve de ponto de partida
 // para os checkboxes — são nomes de exemplo, ajuste à vontade).
 export const PEOPLE_BY_CATEGORY: Record<string, string[]> = {
-  "Apresentador(a)":   ["Rodrigo Câmara", "Fernanda Melo", "Ana Lima", "Sílvia Rocha", "Isabela Costa", "Débora Santos"],
-  "Direção":           ["Cláudio Torres", "Marco Alves", "Nilson César"],
-  "Câmera":            ["Paulo Souza", "Ricardo Viana", "Felipe Andrade", "Carlos Freitas", "Fábio Lima"],
-  "Técnico de Áudio":  ["Letícia Nunes", "Edilson Pereira"],
-  "Grafismo":          ["Bianca Ferreira", "Marcos Tenório"],
-  "Repórter":          ["João Brandão", "André Maia", "Paulo Henrique"],
-  "Narrador":          ["Evandro Ferreira"],
-  "Comentarista":      ["Carla Vieira"],
-  "Produtor":          [],
-  "Sonoplasta":        [],
+  "Apresentador(a)":  ["Rodrigo Câmara", "Fernanda Melo", "Ana Lima", "Sílvia Rocha", "Isabela Costa", "Débora Santos"],
+  "Narrador":         ["Nilson César"],
+  "Comentarista":     ["Edilson Pereira", "Evandro Ferreira"],
+  "Ao vivo em campo": ["Bianca Ferreira", "Rodrigo Câmara"],
 };
 
 // Mapeia variações de nome de função (como aparecem em ROLE_PRESETS) para a
@@ -57,21 +55,12 @@ export const PEOPLE_BY_CATEGORY: Record<string, string[]> = {
 // estiverem aqui viram sua própria categoria (útil para funções customizadas
 // que o admin cadastrar na hora).
 const ROLE_TO_CATEGORY: Record<string, string> = {
-  "Apresentador":          "Apresentador(a)",
-  "Apresentadora":         "Apresentador(a)",
-  "Direção":               "Direção",
-  "Câmera":                "Câmera",
-  "Câmera 1":              "Câmera",
-  "Câmera 2":              "Câmera",
-  "Técnico de Áudio":      "Técnico de Áudio",
-  "Grafismo":              "Grafismo",
-  "Repórter":              "Repórter",
-  "Repórter de Campo":     "Repórter",
-  "Repórter de Vestiário": "Repórter",
-  "Narrador":              "Narrador",
-  "Comentarista":          "Comentarista",
-  "Produtor":              "Produtor",
-  "Sonoplasta":            "Sonoplasta",
+  "Apresentador":     "Apresentador(a)",
+  "Apresentadora":    "Apresentador(a)",
+  "Apresentador(a)":  "Apresentador(a)",
+  "Narrador":         "Narrador",
+  "Comentarista":     "Comentarista",
+  "Ao vivo em campo": "Ao vivo em campo",
 };
 
 /** Categoria de pessoas correspondente a uma função. */

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   getWeekDates, PRODUCT_COLORS,
   type Product, type DaySchedule, type Status, type TeamMember,
@@ -9,7 +9,7 @@ import {
   PRODUCT_KINDS, getRolesFor, getPeopleForRole, addPerson, addRole,
   type ProductKindKey,
 } from "./roster";
-import { getSchedule, addProduct, updateProduct, deleteProduct } from "./storage";
+import { subscribeToSchedule, addProduct, updateProduct, deleteProduct } from "./storage";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -643,11 +643,12 @@ function productToForm(p: Product): ProductFormState {
 }
 
 function ProductFormModal({
-  dateLabel, initial, isEditing, onClose, onSave,
+  dateLabel, initial, isEditing, saving, onClose, onSave,
 }: {
   dateLabel: string;
   initial: ProductFormState;
   isEditing: boolean;
+  saving?: boolean;
   onClose: () => void;
   onSave: (form: ProductFormState) => void;
 }) {
@@ -894,11 +895,11 @@ function ProductFormModal({
         </div>
 
         <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-2 justify-end">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 border border-gray-200 transition-colors">
+          <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 border border-gray-200 transition-colors disabled:opacity-50">
             Cancelar
           </button>
-          <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors">
-            Salvar
+          <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-60">
+            {saving ? "Salvando…" : "Salvar"}
           </button>
         </div>
       </form>
@@ -925,9 +926,7 @@ export default function App() {
 
   // ── Formulário de produto (criar/editar) ──
   const [formTarget, setFormTarget] = useState<{ date: string; product?: Product } | null>(null);
-
-  // ── Storage (recarrega sempre que algo é salvo) ──
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const weekDates = useMemo(() => {
     const ref = new Date(now);
@@ -935,11 +934,15 @@ export default function App() {
     return getWeekDates(ref);
   }, [weekOffset, todayStr]);
 
-  const schedule = useMemo(() => getSchedule(weekDates), [weekDates, refreshKey]);
+  // ── Programação (Firestore, em tempo real) ──
+  const [schedule, setSchedule] = useState<DaySchedule[]>(() => weekDates.map(date => ({ date, products: [] })));
 
-  function refresh() {
-    setRefreshKey(k => k + 1);
-  }
+  useEffect(() => {
+    setSchedule(weekDates.map(date => ({ date, products: [] }))); // evita mostrar a semana anterior enquanto carrega
+    const unsubscribe = subscribeToSchedule(weekDates, setSchedule);
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekDates.join(",")]);
 
   function handleLoginSuccess(s: AdminSession) {
     setSession(s);
@@ -951,7 +954,7 @@ export default function App() {
     setSession(null);
   }
 
-  function handleSaveProduct(form: ProductFormState) {
+  async function handleSaveProduct(form: ProductFormState) {
     if (!formTarget) return;
     const kindInfo = PRODUCT_KINDS.find(k => k.key === form.kind)!;
     const payload: Omit<Product, "id"> = {
@@ -963,24 +966,35 @@ export default function App() {
       studio: form.studio,
       status: form.status,
       team: form.team,
-      notes: form.notes || undefined,
-      channel: form.channel || undefined,
+      ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
+      ...(form.channel.trim() ? { channel: form.channel.trim() } : {}),
     };
-    if (formTarget.product) {
-      updateProduct(formTarget.date, formTarget.product.id, payload, weekDates);
-    } else {
-      addProduct(formTarget.date, payload, weekDates);
+    setSaving(true);
+    try {
+      if (formTarget.product) {
+        await updateProduct(formTarget.date, formTarget.product.id, payload, weekDates);
+      } else {
+        await addProduct(formTarget.date, payload, weekDates);
+      }
+      setFormTarget(null);
+      setSelectedProduct(null);
+    } catch (err) {
+      console.error(err);
+      window.alert("Não foi possível salvar agora. Confira sua conexão (ou a configuração do Firebase) e tente de novo.");
+    } finally {
+      setSaving(false);
     }
-    setFormTarget(null);
-    setSelectedProduct(null);
-    refresh();
   }
 
-  function handleDeleteProduct(date: string, product: Product) {
+  async function handleDeleteProduct(date: string, product: Product) {
     if (!window.confirm(`Excluir "${product.name}" da programação?`)) return;
-    deleteProduct(date, product.id);
-    setSelectedProduct(null);
-    refresh();
+    try {
+      await deleteProduct(date, product.id);
+      setSelectedProduct(null);
+    } catch (err) {
+      console.error(err);
+      window.alert("Não foi possível excluir agora. Confira sua conexão e tente de novo.");
+    }
   }
 
   const todaySchedule = schedule.find(d => d.date === todayStr);
@@ -1190,6 +1204,7 @@ export default function App() {
           })}
           initial={formTarget.product ? productToForm(formTarget.product) : kindDefaults("BDPE")}
           isEditing={!!formTarget.product}
+          saving={saving}
           onClose={() => setFormTarget(null)}
           onSave={handleSaveProduct}
         />

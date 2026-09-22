@@ -319,4 +319,5 @@ export const PRODUCT_COLORS: Record<string, string> = {
   JOGO:        "#dc2626", // vermelho
   GCO:         "#ec4899", // rosa
   DESCOMPLICA: "#7c3aed", // roxo
+  EVENTO:      "#14b8a6", // verde-azulado
 };
