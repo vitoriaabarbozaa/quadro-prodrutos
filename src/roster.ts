@@ -44,10 +44,10 @@ export const ROLE_PRESETS: Record<ProductKindKey, string[]> = {
 // Pessoas pré-cadastradas, já separadas por função (serve de ponto de partida
 // para os checkboxes — são nomes de exemplo, ajuste à vontade).
 export const PEOPLE_BY_CATEGORY: Record<string, string[]> = {
-  "Apresentador(a)":  ["Rodrigo Câmara", "Fernanda Melo", "Ana Lima", "Sílvia Rocha", "Isabela Costa", "Débora Santos"],
-  "Narrador":         ["Nilson César"],
-  "Comentarista":     ["Edilson Pereira", "Evandro Ferreira"],
-  "Ao vivo em campo": ["Bianca Ferreira", "Rodrigo Câmara"],
+  "Apresentador(a)":  ["Clarissa Góes","Bruno Fontes", "Maristela Niz", "Giuliano Roque", "Márcio Bonfim", "Sabrina Rocha", "Tiago Medeiros"],
+  "Narrador":         ["Rembrandt Júnior"],
+  "Comentarista":     ["Cabral Neto", "Danny Morais"],
+  "Ao vivo em campo": ["Sarah Porto", "Diogo Marques", "Juan Torres", "Lílian Fonseca"],
 };
 
 // Mapeia variações de nome de função (como aparecem em ROLE_PRESETS) para a
