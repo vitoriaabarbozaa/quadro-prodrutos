@@ -6,12 +6,6 @@ import { db } from "./firebase";
 import { buildSchedule, type Product, type DaySchedule } from "./data";
 import { toMinutes } from "./hooks";
 
-// ── Persistência do quadro (Firestore) ────────────────────────────────────────
-// A programação fica salva na nuvem, num documento por dia
-// (coleção "schedule", id = "YYYY-MM-DD"). Qualquer pessoa que abrir o site
-// vê os mesmos dados, e quem estiver com a tela aberta recebe atualizações em
-// tempo real (onSnapshot) — não precisa nem dar F5.
-
 const COLLECTION = "schedule";
 
 function sortByStart(products: Product[]): Product[] {
@@ -30,7 +24,7 @@ function stripUndefined<T extends object>(obj: T): T {
 function seedFromTemplate(date: string, weekDates: string[]): Product[] {
   const templateWeek = buildSchedule(weekDates);
   const day = templateWeek.find(d => d.date === date);
-  return (day?.products ?? []).map((p, i) => ({ ...p, id: `${date}-t${i}` }));
+  return (day?.products ?? []).map((p, i) => stripUndefined({ ...p, id: `${date}-t${i}` }));
 }
 
 /** Garante que o documento do dia existe no Firestore (semeando com o modelo padrão, se preciso). */

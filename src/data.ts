@@ -35,7 +35,7 @@ function prog(
   studio: string, status: Status,
   team: TeamMember[], notes?: string
 ): Product {
-  return { id: id(), name, shortName, type: "programa", startTime: start, endTime: end, studio, status, team, notes };
+  return { id: id(), name, shortName, type: "programa", startTime: start, endTime: end, studio, status, team, ...(notes ? { notes } : {}) };
 }
 
 export function getWeekDates(referenceDate: Date): string[] {
