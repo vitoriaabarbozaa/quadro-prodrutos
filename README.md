@@ -1,57 +1,40 @@
 # Quadro de Produtos
 
-Painel semanal da programação ao vivo (BDPE, NE1, GE, Boletim, NE2, Jogo, GCO, Descomplica, Evento), pensado pra ficar exibido em tela e ser atualizado pelo Jornalismo.
+Painel semanal da programação ao vivo da Rede Globo Nordeste (BDPE, NE1, GE, Boletim, NE2, Jogo, GCO, Descomplica, Evento), pensado pra ficar exibido em tela e ser atualizado pelo Jornalismo.
 
 ## Funcionalidades
 
-- **Visualização livre**, sem login — o quadro da semana fica visível pra qualquer um que abrir a página (ideal pra ficar espelhado em telas).
+- **Visualização livre**, sem login: o quadro da semana fica visível pra qualquer pessoa que abrir a página (ideal pra ficar espelhado em telas).
+- **Tempo real**: os dados ficam no Firebase (Firestore), então qualquer alteração aparece na hora em todos os dispositivos que estiverem com o quadro aberto.
+- **Navegação por semana** (anterior, "Hoje" e próxima) e **filtro por turno** (Manhã, Tarde, Noite), com destaque pro turno atual.
+- **Em exibição / Próximo**: o cabeçalho mostra o produto que está no ar agora e o próximo, com contagem regressiva, no horário de Recife (UTC-3).
+- **Visão do dia**: clicando no dia, abre uma linha do tempo com os produtos, a linha de "Agora" e o detalhe de cada talento.
 - **Modo Admin** (botão no cabeçalho): login com nome + senha libera criar, editar e excluir produtos da programação.
-- Ao criar/editar um produto, dá pra montar a equipe marcando pessoas em caixinhas por função. Programas de rotina (BDPE, NE1, GE, Boletim, NE2, GCO, Descomplica) e Eventos só pedem Apresentador(a); Jogo pede Narrador, Comentarista e Ao vivo em campo. Dá pra cadastrar gente ou função nova na hora.
-- **EVENTO**: tipo de produto pra coisas fora da rotina normal (ex: coberturas especiais). Tem horário início/fim, estúdio/local, status e apresentador(a), igual aos programas.
-- **Dados compartilhados em tempo real** (Firestore): quem edita num computador, qualquer outra pessoa vendo o site já enxerga a atualização na hora, sem precisar recarregar a página. Veja a seção **Configurando o Firebase** abaixo — é obrigatório configurar antes do site funcionar de verdade.
+- **Formulário de produto** com campos obrigatórios: Nome, Início, Fim, Estúdio / Local, Canal / Transmissão (quando o produto é um jogo) e Equipe (ao menos uma pessoa). Só **Observações** é opcional. Os campos obrigatórios aparecem com `*` e o formulário avisa o que falta antes de salvar.
+- **Equipe por função**: ao criar/editar, dá pra montar a equipe marcando pessoas em caixinhas separadas por função (Apresentador(a), Câmera, Direção, Narrador etc.), com opção de cadastrar gente ou função nova na hora.
+- **Histórico de alterações**: botão "Histórico", no canto superior direito, abre as últimas 100 alterações (quem criou, editou ou excluiu, quando e o que mudou). É público e compartilhado entre dispositivos.
+- **Modo noturno**: botão 🌙/☀️ no cabeçalho. A escolha fica salva no navegador e, na primeira visita, o app segue o tema do sistema.
+- **Responsivo**: grade de 7 colunas no desktop, 3 no tablet e 1 no celular.
 
 ## Stack
 
 - React 19 + TypeScript
 - Vite 8
 - Tailwind CSS v4
-- Firebase Firestore (banco de dados compartilhado, gratuito)
-
-## Configurando o Firebase (obrigatório)
-
-Sem isso, o quadro fica em branco/sem salvar nada — é o "banco de dados" que faz todo mundo ver a mesma programação.
-
-1. Acesse [console.firebase.google.com](https://console.firebase.google.com) e crie um projeto novo (é grátis, não pede cartão pro plano usado aqui).
-2. No menu lateral, vá em **Build → Firestore Database** → **Criar banco de dados**. Pode escolher a região mais próxima (ex: `southamerica-east1`) e começar em **modo de produção**.
-3. Na aba **Regras** do Firestore, cole isto e publique (libera leitura pra todo mundo ver o quadro, e escrita — a proteção de quem edita já é feita pela senha do Modo Admin dentro do site):
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /schedule/{date} {
-         allow read, write: if true;
-       }
-     }
-   }
-   ```
-4. Volte em **Configurações do projeto** (ícone de engrenagem) → aba **Geral** → role até "Seus apps" → clique no ícone `</>` (Web) pra criar um app da Web. Dê qualquer apelido.
-5. O Firebase vai mostrar um bloco `firebaseConfig` com `apiKey`, `authDomain`, etc. Copie esses valores pro arquivo `src/firebase.ts` do projeto, substituindo os `"COLE_AQUI"`.
-6. Salve, rode `npm run dev` (ou publique de novo no GitHub Pages) — pronto, o quadro já fica salvo e sincronizado.
-
-> Esses valores do `firebaseConfig` não são segredo (é normal e esperado que apareçam no código do site) — a única coisa que "protege" o banco são as Regras do passo 3. Como está liberado tanto leitura quanto escrita, tecnicamente qualquer pessoa com acesso ao endereço do Firestore poderia editar direto por fora do site — igual já acontece hoje com a senha do Modo Admin, não é uma segurança de nível bancário, é pra uso interno de confiança.
+- Firebase (Firestore)
 
 ## Rodando localmente
 
-Pré-requisito: [Node.js](https://nodejs.org) instalado (versão LTS) e o Firebase já configurado (seção acima).
+Pré-requisito: [Node.js](https://nodejs.org) instalado (versão LTS).
 
-```bash
+```
 npm install
 npm run dev
 ```
 
 O terminal vai mostrar um link (por padrão `http://localhost:8443`). Se a porta estiver ocupada, rode com outra:
 
-```bash
+```
 # Windows (PowerShell)
 $env:PORT=3000; npm run dev
 
@@ -61,24 +44,43 @@ PORT=3000 npm run dev
 
 ### Build de produção
 
-```bash
+```
 npm run build
 ```
 
-Gera os arquivos finais em `dist/`.
+Gera os arquivos finais em `dist/`. Pra testar o build localmente: `npm run preview`.
+
+## Deploy
+
+- **Vercel**: importe o repositório, com comando de build `npm run build` e pasta de saída `dist`. Cada push na `main` gera um novo deploy.
+- **GitHub Pages**: o workflow `.github/workflows/deploy.yml` faz build e publica a cada push na `main`, definindo `VITE_BASE` com o nome do repositório. Atenção: no plano gratuito do GitHub, o Pages não funciona com repositório privado.
 
 ## Estrutura do projeto
 
 ```
 src/
-  App.tsx       # UI principal: grade semanal, modais, formulário de produto
-  data.ts       # Tipos e modelo padrão de programação (usado só pra semear dias novos)
-  storage.ts    # Persistência da programação no Firestore (tempo real)
-  firebase.ts   # Configuração de conexão com o Firebase — cole suas chaves aqui
+  App.tsx       # UI principal: cabeçalho, grade semanal, visão do dia, modais, formulário de produto, modo noturno
+  index.css     # Estilos globais, responsividade, cores de status e tema noturno
+  data.ts       # Tipos, cores dos produtos e modelo padrão de programação
+  storage.ts    # Persistência no Firestore (programação e histórico)
+  firebase.ts   # Configuração e inicialização do Firebase
   roster.ts     # Tipos de produto, funções e pessoas pré-cadastradas
   auth.ts       # Contas e senhas de acesso ao Modo Admin
   hooks.ts      # Utilitários de hora/formatação
 ```
+
+## Firebase
+
+Os dados ficam em duas coleções do Firestore:
+
+- `schedule`: um documento por dia (`AAAA-MM-DD`) com a lista de produtos. Quando o dia ainda não existe, ele é criado a partir do modelo padrão em `src/data.ts` (BDPE, NE1, GE, Boletim e NE2, que acontecem todo dia). Jogo, GCO, Descomplica e Evento são adicionados manualmente pelo admin, só nos dias em que acontecem.
+- `editLogs`: um documento por alteração, usado pelo Histórico.
+
+As regras do Firestore precisam permitir leitura e escrita nessas duas coleções. Se o Histórico mostrar um aviso de bloqueio ou o app avisar que "o histórico não foi registrado", é isso que falta. A configuração do projeto fica em `src/firebase.ts`.
+
+## Modo noturno
+
+O tema é controlado pela classe `dark` no elemento `<html>`, e a escolha fica salva no `localStorage` (chave `theme`). Em vez de duplicar cada classe do Tailwind, o `src/index.css` redefine as variáveis de cor do tema dentro de `html.dark`. Pra ajustar as cores do modo noturno, edite esse bloco. As cores dos badges de status (Confirmado, Previsto, Alterado, Cancelado) ficam nas variáveis `--st-*`, no mesmo arquivo.
 
 ## Acesso de Admin
 
@@ -86,14 +88,15 @@ As contas com acesso de edição ficam em `src/auth.ts`, no array `ACCOUNTS`. Pr
 
 ```ts
 export const ACCOUNTS: Account[] = [
-  { label: "Admin", password: "globoadmin", role: "admin" },
-  // { label: "COT", password: "globocot", role: "admin" },
+  { label: "Admin", password: "<sua-senha>", role: "admin" },
+  // { label: "COT", password: "<outra-senha>", role: "admin" },
 ];
 ```
 
-> **Atenção:** como é um projeto 100% front-end, essa senha fica visível no código-fonte pra quem tiver acesso ao repositório (e também no navegador, pra quem inspecionar a página). Não é uma segurança "à prova de bala" — serve pra evitar que qualquer pessoa mexa na programação sem querer, não pra proteger informação sigilosa. Se o repositório for público, considere isso antes de usar uma senha real de produção.
+O nome digitado no login aparece no Histórico como autor da alteração, e a sessão fica salva no navegador até clicar em "Sair".
+
+> **Atenção:** como é um projeto 100% front-end, essa senha vai dentro do JavaScript que o navegador baixa, então fica visível pra qualquer pessoa que inspecione o site, mesmo com o repositório privado. O mesmo vale pra configuração do Firebase. Não é uma segurança "à prova de bala": serve pra evitar que alguém mexa na programação sem querer, não pra proteger informação sigilosa. Não use uma senha que você usa em outros lugares.
 
 ## Cadastrando pessoas e funções
 
-As sugestões de pessoas por função (usadas nas caixinhas do formulário) ficam em `src/roster.ts`, no objeto `PEOPLE_BY_CATEGORY`. Também é possível adicionar pessoas e funções novas direto pela interface, no Modo Admin — por enquanto isso fica salvo só no navegador de quem cadastrou (diferente da programação em si, que já é compartilhada pelo Firestore). Se quiser que essas listas também sejam compartilhadas entre todo mundo, é só pedir.
-
+As sugestões de pessoas por função (usadas nas caixinhas do formulário) ficam em `src/roster.ts`, no objeto `PEOPLE_BY_CATEGORY`. Também é possível adicionar pessoas e funções novas direto pela interface, no Modo Admin. Essas adições ficam salvas só no navegador (`localStorage`) e **não** sincronizam entre dispositivos; pra uma pessoa aparecer pra todo mundo, inclua-a no `roster.ts`.
