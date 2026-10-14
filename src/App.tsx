@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect } from "react";
 import {
   getWeekDates, PRODUCT_COLORS,
   type Product, type DaySchedule, type Status, type TeamMember,
@@ -23,11 +23,12 @@ const STATUS_LABEL: Record<Status, string> = {
   cancelado:  "Cancelado",
 };
 
+// As cores reais ficam em src/index.css (variáveis --st-*), com valores diferentes no modo noturno.
 const STATUS_COLORS: Record<Status, { bg: string; text: string; border: string }> = {
-  confirmado: { bg: "#f0fdf4", text: "#15803d", border: "#86efac" },
-  previsto:   { bg: "#eff6ff", text: "#1d4ed8", border: "#93c5fd" },
-  alterado:   { bg: "#fff7ed", text: "#c2410c", border: "#fdba74" },
-  cancelado:  { bg: "#fef2f2", text: "#b91c1c", border: "#fca5a5" },
+  confirmado: { bg: "var(--st-confirmado-bg)", text: "var(--st-confirmado-text)", border: "var(--st-confirmado-border)" },
+  previsto:   { bg: "var(--st-previsto-bg)",   text: "var(--st-previsto-text)",   border: "var(--st-previsto-border)" },
+  alterado:   { bg: "var(--st-alterado-bg)",   text: "var(--st-alterado-text)",   border: "var(--st-alterado-border)" },
+  cancelado:  { bg: "var(--st-cancelado-bg)",  text: "var(--st-cancelado-text)",  border: "var(--st-cancelado-border)" },
 };
 
 const DAY_LABELS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
@@ -86,6 +87,41 @@ function talentCount(p: Product): number {
   return p.team.filter(m =>
     ["Narrador", "Comentarista", "Apresentador", "Apresentadora"].some(r => m.role.startsWith(r))
   ).length;
+}
+
+// ── Modo noturno ──────────────────────────────────────────────────────────────
+
+function useDarkMode() {
+  const [dark, setDark] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark") return true;
+      if (saved === "light") return false;
+    } catch { /* localStorage indisponível */ }
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  });
+
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch { /* ignora */ }
+  }, [dark]);
+
+  return [dark, () => setDark(d => !d)] as const;
+}
+
+function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={dark ? "Mudar para modo claro" : "Mudar para modo noturno"}
+      aria-label={dark ? "Mudar para modo claro" : "Mudar para modo noturno"}
+      aria-pressed={dark}
+      className="text-sm leading-none text-gray-500 hover:text-gray-800 bg-white border border-gray-200 hover:border-gray-300 rounded-lg px-2.5 py-2 transition-colors"
+    >
+      {dark ? "☀️" : "🌙"}
+    </button>
+  );
 }
 
 // ── ProductModal ──────────────────────────────────────────────────────────────
@@ -577,6 +613,7 @@ function LoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (s
             value={password}
             onChange={e => { setPassword(e.target.value); setError(""); }}
             placeholder="••••••••"
+            required
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
           />
           {error && <p className="text-xs text-red-500 mt-1.5">{error}</p>}
@@ -709,6 +746,7 @@ function ProductFormModal({
   const [peopleVersion, bump]   = useState(0); // força atualizar lista após addPerson/addRole
   const [newPersonByRole, setNewPersonByRole] = useState<Record<string, string>>({});
   const [newRoleName, setNewRoleName]         = useState("");
+  const [formError, setFormError]             = useState("");
 
   const roles     = useMemo(() => getRolesFor(form.kind), [form.kind, peopleVersion]);
   const kindInfo  = PRODUCT_KINDS.find(k => k.key === form.kind)!;
@@ -756,7 +794,18 @@ function ProductFormModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSave(form);
+    // Campos obrigatórios (o "required" do HTML aceita só espaços, então validamos com trim)
+    const missing: string[] = [];
+    if (!form.name.trim())   missing.push("Nome");
+    if (!form.studio.trim()) missing.push("Estúdio / Local");
+    if (kindInfo.type === "jogo" && !form.channel.trim()) missing.push("Canal / Transmissão");
+    if (form.team.length === 0) missing.push("Equipe (marque ao menos uma pessoa)");
+    if (missing.length > 0) {
+      setFormError(`Preencha os campos obrigatórios: ${missing.join(", ")}.`);
+      return;
+    }
+    setFormError("");
+    onSave({ ...form, name: form.name.trim(), studio: form.studio.trim(), channel: form.channel.trim() });
   }
 
   return (
@@ -809,7 +858,7 @@ function ProductFormModal({
           {/* Nome / horários / estúdio */}
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Nome</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Nome<span className="text-red-500"> *</span></label>
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -818,7 +867,7 @@ function ProductFormModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Início</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Início<span className="text-red-500"> *</span></label>
               <input
                 type="time"
                 value={form.startTime}
@@ -828,7 +877,7 @@ function ProductFormModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Fim</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Fim<span className="text-red-500"> *</span></label>
               <input
                 type="time"
                 value={form.endTime}
@@ -838,11 +887,12 @@ function ProductFormModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Estúdio / Local</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Estúdio / Local<span className="text-red-500"> *</span></label>
               <input
                 value={form.studio}
                 onChange={e => setForm(f => ({ ...f, studio: e.target.value }))}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                required
               />
             </div>
             <div>
@@ -860,11 +910,12 @@ function ProductFormModal({
             </div>
             {kindInfo.type === "jogo" && (
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Canal / Transmissão</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Canal / Transmissão<span className="text-red-500"> *</span></label>
                 <input
                   value={form.channel}
                   onChange={e => setForm(f => ({ ...f, channel: e.target.value }))}
                   placeholder="Ex: SporTV"
+                  required
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                 />
               </div>
@@ -874,7 +925,7 @@ function ProductFormModal({
           {/* Equipe */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Equipe</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Equipe<span className="text-red-500"> *</span></p>
               <span className="mono text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
                 {form.team.length} selecionado{form.team.length !== 1 ? "s" : ""}
               </span>
@@ -960,6 +1011,12 @@ function ProductFormModal({
           </div>
         </div>
 
+        {formError && (
+          <div role="alert" className="mx-6 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 shrink-0">
+            {formError}
+          </div>
+        )}
+
         <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-2 justify-end">
           <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 border border-gray-200 transition-colors disabled:opacity-50">
             Cancelar
@@ -984,6 +1041,7 @@ export default function App() {
   const [selectedDay, setSelectedDay] = useState<{ schedule: DaySchedule; index: number } | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [shift, setShift] = useState<Shift>("todos");
+  const [dark, toggleDark] = useDarkMode();
 
   // ── Admin ──
   const [session, setSession]     = useState<AdminSession | null>(() => getSession());
@@ -1188,6 +1246,7 @@ export default function App() {
           <div className="shrink-0">
             {isAdmin ? (
               <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg pl-3 pr-1.5 py-1.5">
+                <ThemeToggle dark={dark} onToggle={toggleDark} />
                 <span className="text-xs font-semibold text-emerald-700">🔓 {session!.name}</span>
                 <button
                   onClick={() => setShowEditLog(true)}
@@ -1204,6 +1263,7 @@ export default function App() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
+                <ThemeToggle dark={dark} onToggle={toggleDark} />
                 <button
                   onClick={() => setShowEditLog(true)}
                   className="text-xs font-medium text-blue-700 hover:text-blue-900 bg-white border border-blue-200 rounded-lg px-3 py-2 transition-colors"
@@ -1239,13 +1299,6 @@ export default function App() {
             </svg>
           </button>
           <span className="text-sm text-gray-500 ml-1">{weekLabel}</span>
-
-          <button
-            onClick={() => setShowEditLog(true)}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
-          >
-            Histórico de alterações
-          </button>
 
           <div className="w-px h-4 bg-gray-200 mx-1" />
 
