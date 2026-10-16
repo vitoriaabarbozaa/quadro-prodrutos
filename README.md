@@ -15,6 +15,7 @@ Painel semanal da programação ao vivo da Rede Globo Nordeste (BDPE, NE1, GE, B
 - **Histórico de alterações**: botão "Histórico", no canto superior direito, abre as últimas 100 alterações (quem criou, editou ou excluiu, quando e o que mudou). É público e compartilhado entre dispositivos.
 - **Modo noturno**: botão 🌙/☀️ no cabeçalho. A escolha fica salva no navegador e, na primeira visita, o app segue o tema do sistema.
 - **Responsivo**: grade de 7 colunas no desktop, 3 no tablet e 1 no celular.
+- **Instalável (PWA)**: dá pra instalar no celular, tablet ou computador e abrir como um app, em tela cheia e com ícone próprio. Veja a seção "Instalar como app".
 
 ## Stack
 
@@ -67,6 +68,11 @@ src/
   roster.ts     # Tipos de produto, funções e pessoas pré-cadastradas
   auth.ts       # Contas e senhas de acesso ao Modo Admin
   hooks.ts      # Utilitários de hora/formatação
+  main.tsx      # Entrada do React + registro do service worker
+public/
+  manifest.webmanifest  # Nome, cores e ícones do app instalável
+  sw.js                 # Service worker (cache da "casca" do app)
+  icons/                # Ícones do app (192, 512, maskable, iOS e favicon)
 ```
 
 ## Firebase
@@ -77,6 +83,22 @@ Os dados ficam em duas coleções do Firestore:
 - `editLogs`: um documento por alteração, usado pelo Histórico.
 
 As regras do Firestore precisam permitir leitura e escrita nessas duas coleções. Se o Histórico mostrar um aviso de bloqueio ou o app avisar que "o histórico não foi registrado", é isso que falta. A configuração do projeto fica em `src/firebase.ts`.
+
+## Instalar como app
+
+O site é um PWA, então o navegador oferece a instalação (precisa estar em HTTPS, como no Vercel e no GitHub Pages):
+
+- **Android (Chrome)**: menu ⋮ → **Instalar app** (ou **Adicionar à tela inicial**). Em alguns casos o Chrome também mostra um aviso de instalação sozinho.
+- **iPhone/iPad (Safari)**: botão de compartilhar → **Adicionar à Tela de Início**. O iOS não mostra aviso automático.
+- **Computador (Chrome/Edge)**: ícone de instalar na barra de endereço.
+
+Detalhes do funcionamento:
+
+- O `public/sw.js` guarda a "casca" do app (HTML, JS, CSS e ícones). Sem internet o app abre, mas **a programação não carrega**, porque os dados vêm do Firebase em tempo real e não ficam salvos offline.
+- O HTML é sempre buscado na rede primeiro, e quando sai uma versão nova o app recarrega sozinho. Assim, um quadro que fica ligado numa tela não fica preso numa versão antiga.
+- O service worker só roda no build de produção (`npm run build`), não no `npm run dev`.
+- Pra trocar o ícone, substitua os arquivos em `public/icons/` mantendo os nomes. Nome e cores ficam em `public/manifest.webmanifest`. Se mudar o cache e quiser forçar todo mundo a baixar de novo, altere `VERSION` em `public/sw.js`.
+- Quem já instalou o app precisa reabrir uma vez pra pegar atualizações do manifesto. Mudança de ícone no celular pode exigir reinstalar.
 
 ## Modo noturno
 
